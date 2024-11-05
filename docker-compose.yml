@@ -1,0 +1,78 @@
+version: '3.9'
+services:
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: lkbh11234
+      MYSQL_DATABASE: weblkb_db
+      MYSQL_USER: lkbhosp
+      MYSQL_PASSWORD: lkb11234
+      TZ: Asia/Bangkok
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - ./database:/var/lib/mysql
+      - ./db:/docker-entrypoint-initdb.d
+    networks:
+      - app-network
+  
+  pma:
+    image: phpmyadmin:latest
+    environment:
+      PMA_HOST: db
+      PMA_PORTS: 3306
+      MYSQL_ROOT_PASSWORD: 123456
+    ports:
+      - 85:80
+    links: 
+      - db
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  backend:
+    build: ./backend/
+    ports:
+      - "8081:8081"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: lkbhosp
+      DB_PASSWORD: lkb11234
+      DB_DATABASE: weblkb_db
+    networks:
+      - app-network
+
+  fontend:
+    build: ./fontend/
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API='http://10.10.5.1:8081'
+    networks:
+      - app-network
+
+  manage_proxy:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    networks:
+      - app-network
+      
+networks:
+  app-network:
+    driver: bridge
+
+
+
